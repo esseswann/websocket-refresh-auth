@@ -1,0 +1,24 @@
+[package]
+name = "websocket-refresh-auth"
+version = "1.0.0"
+authors = ["Esse Swann <esseswann@gmail.com>"]
+edition = "2018"
+
+[[bin]]
+name = "websocket-refresh-auth"
+path = "src/main.rs"
+
+[dependencies]
+log = "0.4.11"
+jsonwebtoken = "7"
+actix = "*"
+actix-web = "*"
+actix-web-actors = "*"
+
+rand = "0.7"
+bytes = "0.5"
+byteorder = "1.3"
+futures = "0.3"
+env_logger = "0.8"
+serde = "1"
+serde_json = "1"
