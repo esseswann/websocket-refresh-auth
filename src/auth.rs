@@ -34,6 +34,7 @@ enum Response {
         expires_at: u128,
         is_new: bool
     },
+    InvalidRequest,
     InvalidPassword,
     LoggedOut,
     NotLoggedIn,
@@ -44,47 +45,46 @@ enum Response {
 
 impl MessageHandler for Auth {
     fn handle_message(&mut self, string: String) -> String {
-        match serde_json::from_str(&string) {
-            Err(_) => "Invalid request".to_string(),
+        let result = match serde_json::from_str(&string) {
+            Err(_) => Response::InvalidRequest,
             Ok(message) => match message {
-                Message::Logout => match self.authorized {
-                    true => {
-                        self.authorized = false;
-                        serde_json::to_string(&Response::LoggedOut).unwrap()
-                    },
-                    false => serde_json::to_string(&Response::NotLoggedIn).unwrap()
+                Message::Logout if self.authorized => {
+                    self.authorized = false;
+                    Response::LoggedOut
                 }
+                Message::Logout => Response::NotLoggedIn,
+                Message::Login { .. } if self.authorized =>
+                    Response::AlreadyAuthorized {
+                        username: "geh".to_string()
+                    },
                 Message::Login { username, password} => 
-                    match self.authorized {
-                        true => serde_json::to_string(&Response::AlreadyAuthorized {
-                            username: username
-                        }).unwrap(),
-                        false => match self.users.entry(username.to_string()) {
-                            Entry::Vacant(entry) => {
-                                entry.insert(password);
-                                self.authorized = true;
-                                serde_json::to_string(&Response::Success {
-                                    token: generate_jwt(username),
-                                    expires_at: generate_exp(),
-                                    is_new: true
-                                }).unwrap()
+                    match self.users.entry(username.to_string()) {
+                        Entry::Vacant(entry) => {
+                            entry.insert(password);
+                            self.authorized = true;
+                            Response::Success {
+                                token: generate_jwt(username),
+                                expires_at: generate_exp(),
+                                is_new: true
                             }
-                            Entry::Occupied(entry) =>
-                                match entry.get() == &password {
-                                    true => {
-                                        self.authorized = true;
-                                        serde_json::to_string(&Response::Success {
-                                            token: generate_jwt(username),
-                                            expires_at: generate_exp(),
-                                            is_new: false
-                                        }).unwrap()
-                                    },
-                                    false => serde_json::to_string(&Response::InvalidPassword).unwrap()
-                            }
+                        }
+                        Entry::Occupied(entry) =>
+                            match entry.get() == &password {
+                                true => {
+                                    self.authorized = true;
+                                    Response::Success {
+                                        token: generate_jwt(username),
+                                        expires_at: generate_exp(),
+                                        is_new: false
+                                    }
+                                },
+                                false => Response::InvalidPassword
                         }
                     }
                 }
-        }
+            };
+
+        serde_json::to_string(&result).unwrap()
     }
 }
 
