@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use serde::{Deserialize, Serialize};
-use serde_json;
+use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 pub type UserKey = (String, String);
 pub type Users = HashMap<UserKey, u32>;
@@ -26,6 +27,17 @@ enum Message {
     Logout
 }
 
+#[derive(Serialize, Deserialize)]
+#[serde(tag = "type")]
+enum Response {
+    Success {
+        token: String,
+        expires_at: u128,
+        is_new: bool
+    },
+    Fail
+}
+
 impl MessageHandler for Auth {
     fn handle_message(&mut self, string: String) -> String {
         match serde_json::from_str(&string) {
@@ -36,7 +48,7 @@ impl MessageHandler for Auth {
                         Entry::Vacant(entry) => {
                             self.last_id = self.last_id + 1;
                             entry.insert(self.last_id);
-                            format!("{}", self.last_id)
+                            format!("{}", generate_jwt(self.last_id))
                         }
                         Entry::Occupied(entry) => {
                             format!("{}", entry.get())
@@ -45,29 +57,28 @@ impl MessageHandler for Auth {
                 Message::Logout => "bleh".to_string(),
             }
         }
-        // string
     }
 }
 
-// pub trait UserHandling {
-//     fn get_user(&mut self, string: String) -> String;
-// }
+/// JWT ///
 
-// impl UserHandling for Users {
-//     fn get_user(&mut self, string: String) -> String {
-//         let mut split = string.split(':');
-//         match split.next() {
-//             Option::None => "No username provided".to_string(),
-//             Option::Some(user) => 
-//                 match split.next() {
-//                     Option::None => "No password provided".to_string(),
-//                     Option::Some(password) => {
-//                         let entry = self.entry((user.to_string(), password.to_string()));
-//                         entry.or_insert(32);
-//                         log::debug!("User {}, Password {}", user, password);
-//                         "id:250,expires_at:250000".to_string()
-//                     }
-//             }
-//         }
-//     }
-// }
+#[derive(Debug, Serialize, Deserialize)]
+struct Claims {
+    sub: u32,
+    exp: u128
+}
+
+fn generate_jwt(user_id: u32) -> String {
+    let my_claims = Claims {
+        sub: user_id,
+        exp: SystemTime::now()
+                .checked_add(Duration::new(3600, 0)).unwrap()
+                .duration_since(UNIX_EPOCH).unwrap()
+                .as_millis()
+    };
+
+    match encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())) {
+        Ok(token) => token,
+        Err(_) => "geh".to_string()
+    }
+}

@@ -5,7 +5,7 @@ authors = ["Esse Swann <esseswann@gmail.com>"]
 edition = "2018"
 
 [[bin]]
-name = "websocket-refresh-auth"
+name = "websocket_refresh_auth"
 path = "src/main.rs"
 
 [dependencies]
