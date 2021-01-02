@@ -34,7 +34,12 @@ enum Response {
         expires_at: u128,
         is_new: bool
     },
-    Fail
+    InvalidPassword,
+    LoggedOut,
+    NotLoggedIn,
+    AlreadyAuthorized {
+        username: String
+    }
 }
 
 impl MessageHandler for Auth {
@@ -42,17 +47,40 @@ impl MessageHandler for Auth {
         match serde_json::from_str(&string) {
             Err(_) => "Invalid request".to_string(),
             Ok(message) => match message {
-                Message::Logout => "bleh".to_string(),
+                Message::Logout => match self.authorized {
+                    true => {
+                        self.authorized = false;
+                        serde_json::to_string(&Response::LoggedOut).unwrap()
+                    },
+                    false => serde_json::to_string(&Response::NotLoggedIn).unwrap()
+                }
                 Message::Login { username, password} => 
-                    match self.users.entry(username.to_string()) {
-                        Entry::Vacant(entry) => {
-                            entry.insert(password);
-                            generate_jwt(username)
-                        }
-                        Entry::Occupied(entry) =>
-                            match entry.get() == &password {
-                                true => generate_jwt(username),
-                                false => "you geh".to_string()
+                    match self.authorized {
+                        true => serde_json::to_string(&Response::AlreadyAuthorized {
+                            username: username
+                        }).unwrap(),
+                        false => match self.users.entry(username.to_string()) {
+                            Entry::Vacant(entry) => {
+                                entry.insert(password);
+                                self.authorized = true;
+                                serde_json::to_string(&Response::Success {
+                                    token: generate_jwt(username),
+                                    expires_at: generate_exp(),
+                                    is_new: true
+                                }).unwrap()
+                            }
+                            Entry::Occupied(entry) =>
+                                match entry.get() == &password {
+                                    true => {
+                                        self.authorized = true;
+                                        serde_json::to_string(&Response::Success {
+                                            token: generate_jwt(username),
+                                            expires_at: generate_exp(),
+                                            is_new: false
+                                        }).unwrap()
+                                    },
+                                    false => serde_json::to_string(&Response::InvalidPassword).unwrap()
+                            }
                         }
                     }
                 }
@@ -71,14 +99,18 @@ struct Claims {
 fn generate_jwt(username: String) -> String {
     let my_claims = Claims {
         sub: username,
-        exp: SystemTime::now()
-                .checked_add(Duration::new(3600, 0)).unwrap()
-                .duration_since(UNIX_EPOCH).unwrap()
-                .as_millis()
+        exp: generate_exp()
     };
 
     match encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())) {
         Ok(token) => token,
         Err(_) => "geh".to_string()
     }
+}
+
+fn generate_exp() -> u128 {
+    SystemTime::now()
+        .checked_add(Duration::new(3600, 0)).unwrap()
+        .duration_since(UNIX_EPOCH).unwrap()
+        .as_millis()
 }
