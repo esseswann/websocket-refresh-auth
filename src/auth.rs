@@ -4,12 +4,11 @@ use serde::{Deserialize, Serialize};
 use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
-pub type UserKey = (String, String);
-pub type Users = HashMap<UserKey, u32>;
+// pub type UserKey = (String, String);
+pub type Users = HashMap<String, String>;
 pub struct Auth {
     pub users: Users,
-    pub authorized: bool,
-    pub last_id: u32,
+    pub authorized: bool
 }
 
 pub trait MessageHandler {
@@ -43,18 +42,21 @@ impl MessageHandler for Auth {
         match serde_json::from_str(&string) {
             Err(_) => "Invalid request".to_string(),
             Ok(message) => match message {
-                Message::Login { username, password} => 
-                    match self.users.entry((username, password)) {
+                Message::Logout => "bleh".to_string(),
+                Message::Login { username, password} => {
+                    let key = &username;
+                    match self.users.entry(key.into()) {
                         Entry::Vacant(entry) => {
-                            self.last_id = self.last_id + 1;
-                            entry.insert(self.last_id);
-                            format!("{}", generate_jwt(self.last_id))
+                            entry.insert(password);
+                            generate_jwt(username)
                         }
-                        Entry::Occupied(entry) => {
-                            format!("{}", entry.get())
+                        Entry::Occupied(entry) =>
+                            match entry.get() == &password {
+                                true => generate_jwt(username),
+                                false => "you geh".to_string()
                         }
                     }
-                Message::Logout => "bleh".to_string(),
+                }
             }
         }
     }
@@ -64,13 +66,13 @@ impl MessageHandler for Auth {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
-    sub: u32,
+    sub: String,
     exp: u128
 }
 
-fn generate_jwt(user_id: u32) -> String {
+fn generate_jwt(username: String) -> String {
     let my_claims = Claims {
-        sub: user_id,
+        sub: username,
         exp: SystemTime::now()
                 .checked_add(Duration::new(3600, 0)).unwrap()
                 .duration_since(UNIX_EPOCH).unwrap()

@@ -24,14 +24,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Auth {
 
 async fn index(
     users: web::Data<Users>,
-    last_id: web::Data<u32>,
     req: HttpRequest,
     stream: web::Payload)
 -> Result<HttpResponse, Error> {
     let resp = ws::start(Auth {
         users: users.get_ref().clone(),
-        authorized: false,
-        last_id: last_id.get_ref().clone(),
+        authorized: false
     }, &req, stream);
     log::debug!("{:?}", resp);
     resp
