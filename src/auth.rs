@@ -43,9 +43,8 @@ impl MessageHandler for Auth {
             Err(_) => "Invalid request".to_string(),
             Ok(message) => match message {
                 Message::Logout => "bleh".to_string(),
-                Message::Login { username, password} => {
-                    let key = &username;
-                    match self.users.entry(key.into()) {
+                Message::Login { username, password} => 
+                    match self.users.entry(username.to_string()) {
                         Entry::Vacant(entry) => {
                             entry.insert(password);
                             generate_jwt(username)
@@ -57,7 +56,6 @@ impl MessageHandler for Auth {
                         }
                     }
                 }
-            }
         }
     }
 }
