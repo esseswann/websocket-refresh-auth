@@ -8,7 +8,16 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 pub type Users = HashMap<String, String>;
 pub struct Auth {
     pub users: Users,
-    pub authorized: bool
+    claims: Option<Claims>
+}
+
+impl Auth {
+    pub fn new(users: Users) -> Auth {
+        Auth {
+            users: users,
+            claims: None
+        }
+    }
 }
 
 pub trait MessageHandler {
@@ -29,18 +38,12 @@ enum Message {
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 enum Response {
-    Success {
-        token: String,
-        expires_at: u128,
-        is_new: bool
-    },
+    Success { token: String },
     InvalidRequest,
     InvalidPassword,
     LoggedOut,
     NotLoggedIn,
-    AlreadyAuthorized {
-        username: String
-    }
+    AlreadyAuthorized { username: String }
 }
 
 impl MessageHandler for Auth {
@@ -48,35 +51,29 @@ impl MessageHandler for Auth {
         let result = match serde_json::from_str(&string) {
             Err(_) => Response::InvalidRequest,
             Ok(message) => match message {
-                Message::Logout if self.authorized => {
-                    self.authorized = false;
+                Message::Logout if self.claims.is_some() => {
+                    self.claims = None;
                     Response::LoggedOut
                 }
                 Message::Logout => Response::NotLoggedIn,
-                Message::Login { .. } if self.authorized =>
+                Message::Login { .. } if self.claims.is_some() =>
                     Response::AlreadyAuthorized {
-                        username: "geh".to_string()
+                        username: self.claims.as_ref().unwrap().sub.to_owned()
                     },
                 Message::Login { username, password} => 
-                    match self.users.entry(username.to_string()) {
+                    match self.users.entry(username.to_owned()) {
                         Entry::Vacant(entry) => {
                             entry.insert(password);
-                            self.authorized = true;
-                            Response::Success {
-                                token: generate_jwt(username),
-                                expires_at: generate_exp(),
-                                is_new: true
-                            }
+                            let TokenResult { token, claims } = generate_jwt(username);
+                            self.claims = Some(claims);
+                            Response::Success { token }
                         }
                         Entry::Occupied(entry) =>
                             match entry.get() == &password {
                                 true => {
-                                    self.authorized = true;
-                                    Response::Success {
-                                        token: generate_jwt(username),
-                                        expires_at: generate_exp(),
-                                        is_new: false
-                                    }
+                                    let TokenResult { token, claims } = generate_jwt(username);
+                                    self.claims = Some(claims);
+                                    Response::Success { token }
                                 },
                                 false => Response::InvalidPassword
                         }
@@ -96,15 +93,22 @@ struct Claims {
     exp: u128
 }
 
-fn generate_jwt(username: String) -> String {
+struct TokenResult {
+    token: String,
+    claims: Claims
+}
+
+fn generate_jwt(username: String) -> TokenResult {
     let my_claims = Claims {
         sub: username,
         exp: generate_exp()
     };
 
-    match encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())) {
-        Ok(token) => token,
-        Err(_) => "geh".to_string()
+    let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())).unwrap();
+
+    TokenResult {
+        token: token,
+        claims: my_claims
     }
 }
 

@@ -27,10 +27,10 @@ async fn index(
     req: HttpRequest,
     stream: web::Payload)
 -> Result<HttpResponse, Error> {
-    let resp = ws::start(Auth {
-        users: users.get_ref().clone(),
-        authorized: false
-    }, &req, stream);
+    let resp = ws::start(
+        Auth::new(users.get_ref().clone()),
+        &req,
+        stream);
     log::debug!("{:?}", resp);
     resp
 }
