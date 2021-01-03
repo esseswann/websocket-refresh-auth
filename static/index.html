@@ -102,7 +102,7 @@
         Success: authSuccess,
         InvalidToken: () => {
           const timeout = 3000
-          setInterval(countdown, 1000)
+          interval = setInterval(countdown, 1000)
           setTimeout(() => content.innerHTML = loggedOut(), timeout)
           localStorage.removeItem('token')
           return `
