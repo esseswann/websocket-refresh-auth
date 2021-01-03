@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>Chat!</title>
+    <title>WebSocket Only Authentication</title>
 
     <meta charset="utf-8" />
   </head>
@@ -60,14 +60,15 @@
         })
       }
 
+      const countdown = () =>
+        typeof countdownEl === 'undefined' || countdownEl.innerHTML == 0
+          ? clearInterval(interval)
+          : countdownEl.innerHTML--
+
       const authSuccess = ({ token, expires_at }) => {
         localStorage.setItem('token', token)
         clearInterval(interval)
-        interval = setInterval(() => {
-          countdown.innerHTML--
-          if (countdown.innerHTML == 0)
-            clearInterval(interval)
-        }, 1000)
+        interval = setInterval(countdown, 1000)
         return `
           <p>
             User authorized with token
@@ -76,10 +77,10 @@
             </a>
           </p>
           <p>This token is going to be refreshed in
-            <span id=countdown>${Math.floor((new Date(expires_at).valueOf() - new Date().valueOf()) / 1000)}</span>
+            <span id=countdownEl>${Math.floor((new Date(expires_at).valueOf() - new Date().valueOf()) / 1000)}</span>
             seconds
           </p>
-          <p>If you refesh the page before the timeout you will receive a new token</p>
+          <p>If you reload the page before the timeout you will receive a new token</p>
           <br />
           <button onclick=logout()>Logout</button>`
       }
@@ -87,9 +88,9 @@
       loggedOut = () => `
         <form onsubmit="return handleLogin(event)">
           <p>Login or register</p>
-          <div><input placeholder=Username id=username type=text /></div>
+          <div><input placeholder=Username id=username type=text autocomplete=username /></div>
           <br/>
-          <div><input placeholder=Password id=password type=password /></div>
+          <div><input placeholder=Password id=password type=password autocomplete=new-password /></div>
           <br/>
           <input type=submit />
         </form>`
