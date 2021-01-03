@@ -45,12 +45,18 @@ enum Message {
 enum Response {
     InvalidRequest,
     InvalidToken,
-    Success { token: String, exp: u128 },
-    Registered { token: String, exp: u128 },
+    Success(AuthSuccess),
+    Registered(AuthSuccess),
     InvalidPassword,
     LoggedOut,
     NotLoggedIn,
     AlreadyAuthorized { username: String }
+}
+
+#[derive(Serialize, Deserialize)]
+struct AuthSuccess {
+    token: String,
+    expires_at: u128
 }
 
 impl MessageHandler for Auth {
@@ -67,7 +73,10 @@ impl MessageHandler for Auth {
                         Ok(token_data) => {
                             let TokenResult { token, claims } = generate_jwt(token_data.claims.sub);
                             self.claims = Some(claims);
-                            Response::Success { token, exp: self.claims.as_ref().unwrap().exp }
+                            Response::Success(AuthSuccess {
+                                token,
+                                expires_at: self.claims.as_ref().unwrap().exp
+                            })
                         },
                         Err(_) => Response::InvalidToken
                     }
@@ -88,11 +97,15 @@ impl MessageHandler for Auth {
                         entry => {
                             let TokenResult { token, claims } = generate_jwt(username);
                             self.claims = Some(claims);
+                            let auth_success = AuthSuccess {
+                                token,
+                                expires_at: self.claims.as_ref().unwrap().exp
+                            };
                             match entry {
-                                Entry::Occupied(_) => Response::Success { token, exp: self.claims.as_ref().unwrap().exp },
+                                Entry::Occupied(_) => Response::Success(auth_success),
                                 Entry::Vacant(entry) => {
                                     entry.insert(password);
-                                    Response::Registered { token, exp: self.claims.as_ref().unwrap().exp }
+                                    Response::Registered(auth_success)
                                 } 
                             }
                         }

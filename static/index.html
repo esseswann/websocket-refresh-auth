@@ -60,7 +60,7 @@
         })
       }
 
-      const authSuccess = ({ token, exp }) => {
+      const authSuccess = ({ token, expires_at }) => {
         localStorage.setItem('token', token)
         clearInterval(interval)
         interval = setInterval(() => {
@@ -76,7 +76,7 @@
             </a>
           </p>
           <p>This token is going to be refreshed in
-            <span id=countdown>${Math.floor((new Date(exp).valueOf() - new Date().valueOf()) / 1000)}</span>
+            <span id=countdown>${Math.floor((new Date(expires_at).valueOf() - new Date().valueOf()) / 1000)}</span>
             seconds
           </p>
           <p>If you refesh the page before the timeout you will receive a new token</p>
