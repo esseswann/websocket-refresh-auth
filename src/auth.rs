@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use serde::{Deserialize, Serialize};
-use jsonwebtoken::{encode, decode, Header, Algorithm, Validation, EncodingKey, DecodingKey};
+use jsonwebtoken::{encode, decode, Header, Algorithm, errors, TokenData, Validation, EncodingKey, DecodingKey};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // pub type UserKey = (String, String);
@@ -32,15 +32,19 @@ enum Message {
         username: String,
         password: String
     },
-    Logout
+    Logout,
+    RefreshToken {
+        token: String
+    }
 }
 
 #[derive(Serialize, Deserialize)]
 #[serde(tag = "type")]
 enum Response {
+    InvalidRequest,
+    InvalidToken,
     Success { token: String },
     Registered { token: String },
-    InvalidRequest,
     InvalidPassword,
     LoggedOut,
     NotLoggedIn,
@@ -52,6 +56,20 @@ impl MessageHandler for Auth {
         let result = match serde_json::from_str(&string) {
             Err(_) => Response::InvalidRequest,
             Ok(message) => match message {
+                Message::RefreshToken { token } => {
+                    let decoded: Result<TokenData<Claims>, errors::Error> = decode(
+                        &token,
+                        &DecodingKey::from_secret("secret".as_ref()),
+                        &Validation::default());
+                    match decoded {
+                        Ok(token_data) => {
+                            let TokenResult { token, claims } = generate_jwt(token_data.claims.sub);
+                            self.claims = Some(claims);
+                            Response::Success { token }
+                        },
+                        Err(_) => Response::InvalidToken
+                    }
+                },
                 Message::Logout if self.claims.is_some() => {
                     self.claims = None;
                     Response::LoggedOut

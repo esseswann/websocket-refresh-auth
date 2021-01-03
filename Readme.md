@@ -25,7 +25,9 @@ It is implemented in Rust just to practice this language and does not rely on an
 
 ## Considerations
 ### Horizontal scaling
-It seems that nothing prevents from having multiple nodes of such service as long as the refresh tokens are signed with JWK\secret that's either same or can be independently validated
+It seems that nothing prevents from having multiple nodes of such service as long as
+- the refresh tokens are signed with JWK\secret that's either same or can be independently validated
+- blacklist is independently accessible
 
 ### Heartbeat
 The refresh token check during heartbeat is used only for convenience following a consideration that performance penalty is negligible since the heartbeat is required anyway. \
