@@ -32,7 +32,9 @@ enum Message {
         username: String,
         password: String
     },
-    Logout,
+    Logout {
+        token: String
+    },
     RefreshToken {
         token: String
     }
@@ -70,11 +72,11 @@ impl MessageHandler for Auth {
                         Err(_) => Response::InvalidToken
                     }
                 },
-                Message::Logout if self.claims.is_some() => {
+                Message::Logout { .. } if self.claims.is_some() => {
                     self.claims = None;
                     Response::LoggedOut
                 }
-                Message::Logout => Response::NotLoggedIn,
+                Message::Logout { .. } => Response::NotLoggedIn,
                 Message::Login { .. } if self.claims.is_some() =>
                     Response::AlreadyAuthorized {
                         username: self.claims.as_ref().unwrap().sub.to_owned()
