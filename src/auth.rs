@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use serde::{Deserialize, Serialize};
-use jsonwebtoken::{encode, decode, Header, Algorithm, errors, TokenData, Validation, EncodingKey, DecodingKey};
+use jsonwebtoken::{encode, decode, Header, errors, TokenData, Validation, EncodingKey, DecodingKey};
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 // pub type UserKey = (String, String);

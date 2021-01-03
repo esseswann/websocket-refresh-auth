@@ -19,10 +19,7 @@
         const connect = () => {
           disconnect()
 
-          const wsUri =
-            (window.location.protocol === 'https:' ? 'wss://' : 'ws://') +
-            window.location.host +
-            '/ws/'
+          const wsUri = `ws://${window.location.host}/ws/`
 
           conn = new WebSocket(wsUri)
           log('Connecting...')
@@ -99,6 +96,14 @@
     <div>
       <button id="btn_connect">Connect</button>
       Status: <span id="span_status">disconnected</span>
+    </div>
+
+    <div id=credentials>
+      <form>
+        <input type=text />
+        <input type=password />
+        <button>Authorize</button>
+      </form>
     </div>
 
     <div
