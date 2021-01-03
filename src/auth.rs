@@ -39,6 +39,7 @@ enum Message {
 #[serde(tag = "type")]
 enum Response {
     Success { token: String },
+    Registered { token: String },
     InvalidRequest,
     InvalidPassword,
     LoggedOut,
@@ -62,25 +63,22 @@ impl MessageHandler for Auth {
                     },
                 Message::Login { username, password} => 
                     match self.users.entry(username.to_owned()) {
-                        Entry::Vacant(entry) => {
-                            entry.insert(password);
+                        Entry::Occupied(entry) if entry.get() == &password =>
+                            Response::InvalidPassword,
+                        entry => {
                             let TokenResult { token, claims } = generate_jwt(username);
                             self.claims = Some(claims);
-                            Response::Success { token }
-                        }
-                        Entry::Occupied(entry) =>
-                            match entry.get() == &password {
-                                true => {
-                                    let TokenResult { token, claims } = generate_jwt(username);
-                                    self.claims = Some(claims);
-                                    Response::Success { token }
-                                },
-                                false => Response::InvalidPassword
+                            match entry {
+                                Entry::Occupied(_) => Response::Success { token },
+                                Entry::Vacant(entry) => {
+                                    entry.insert(password);
+                                    Response::Registered { token }
+                                } 
+                            }
                         }
                     }
                 }
             };
-
         serde_json::to_string(&result).unwrap()
     }
 }
