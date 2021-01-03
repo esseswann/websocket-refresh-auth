@@ -56,7 +56,7 @@ enum Response {
 #[derive(Serialize, Deserialize)]
 struct AuthSuccess {
     token: String,
-    expires_at: u128
+    expires_at: u64
 }
 
 impl MessageHandler for Auth {
@@ -121,7 +121,7 @@ impl MessageHandler for Auth {
 #[derive(Debug, Serialize, Deserialize)]
 struct Claims {
     sub: String,
-    exp: u128
+    exp: u64
 }
 
 struct TokenResult {
@@ -143,9 +143,9 @@ fn generate_jwt(username: String) -> TokenResult {
     }
 }
 
-fn generate_exp() -> u128 {
+fn generate_exp() -> u64 {
     SystemTime::now()
         .checked_add(Duration::new(20, 0)).unwrap()
         .duration_since(UNIX_EPOCH).unwrap()
-        .as_millis()
+        .as_secs()
 }

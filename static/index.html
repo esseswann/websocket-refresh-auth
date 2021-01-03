@@ -77,8 +77,7 @@
             </a>
           </p>
           <p>This token is going to be refreshed in
-            <span id=countdownEl>${Math.floor((new Date(expires_at).valueOf() - new Date().valueOf()) / 1000)}</span>
-            seconds
+            <span id=countdownEl>${Math.floor((new Date(expires_at * 1000).valueOf() - new Date().valueOf()) / 1000)}</span>
           </p>
           <p>If you reload the page before the timeout you will receive a new token</p>
           <br />
@@ -100,7 +99,17 @@
         NotLoggedIn: loggedOut,
         LoggedOut: loggedOut,
         Registered: authSuccess,
-        Success: authSuccess
+        Success: authSuccess,
+        InvalidToken: () => {
+          const timeout = 3000
+          setInterval(countdown, 1000)
+          setTimeout(() => content.innerHTML = loggedOut(), timeout)
+          localStorage.removeItem('token')
+          return `
+            <p>Token is either expired or invalid</p>
+            <p>Redirecting in <span id=countdownEl>${timeout / 1000}</span></p>
+          `
+        }
       }
 
       connect(true)
