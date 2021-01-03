@@ -16,6 +16,7 @@
       const uri = `ws://${window.location.host}/ws/`
 
       let ws
+      let interval // Required for countdown
       
       const send = (data) => ws.send(JSON.stringify(data))
 
@@ -61,13 +62,21 @@
 
       const authSuccess = ({ token }) => {
         localStorage.setItem('token', token)
+        clearInterval(interval)
+        interval = setInterval(() => {
+          countdown.innerHTML--
+          if (countdown.innerHTML == 0)
+            clearInterval(interval)
+        }, 1000)
         return `
-          <div>
+          <p>
             User authorized with token
             <a target=_blank href="https://jwt.io?token=${token}">
               <code>${token}</code>
             </a>
-          </div>
+          </p>
+          <p>This token is going to be refreshed in <span id=countdown>20</span> seconds</p>
+          <p>If you refesh the page before the timeout you will receive a new token</p>
           <br />
           <button onclick=logout()>Logout</button>`
       }
@@ -92,22 +101,5 @@
 
       connect(true)
     </script>
-    <!-- <div>
-      <button id="btn_connect">Connect</button>
-      Status: <span id="span_status">disconnected</span>
-    </div>
-
-    <div id=credentials>
-      <form>
-        <input type=text />
-        <input type=password />
-        <button>Authorize</button>
-      </form>
-    </div>
-
-    <div
-      id="div_log"
-      style="width: 20em; height: 15em; overflow: auto; border: 1px solid black"
-    ></div> -->
   </body>
 </html>
