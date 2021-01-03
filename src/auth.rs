@@ -45,8 +45,8 @@ enum Message {
 enum Response {
     InvalidRequest,
     InvalidToken,
-    Success { token: String },
-    Registered { token: String },
+    Success { token: String, exp: u128 },
+    Registered { token: String, exp: u128 },
     InvalidPassword,
     LoggedOut,
     NotLoggedIn,
@@ -67,7 +67,7 @@ impl MessageHandler for Auth {
                         Ok(token_data) => {
                             let TokenResult { token, claims } = generate_jwt(token_data.claims.sub);
                             self.claims = Some(claims);
-                            Response::Success { token }
+                            Response::Success { token, exp: self.claims.as_ref().unwrap().exp }
                         },
                         Err(_) => Response::InvalidToken
                     }
@@ -89,10 +89,10 @@ impl MessageHandler for Auth {
                             let TokenResult { token, claims } = generate_jwt(username);
                             self.claims = Some(claims);
                             match entry {
-                                Entry::Occupied(_) => Response::Success { token },
+                                Entry::Occupied(_) => Response::Success { token, exp: self.claims.as_ref().unwrap().exp },
                                 Entry::Vacant(entry) => {
                                     entry.insert(password);
-                                    Response::Registered { token }
+                                    Response::Registered { token, exp: self.claims.as_ref().unwrap().exp }
                                 } 
                             }
                         }
@@ -132,7 +132,7 @@ fn generate_jwt(username: String) -> TokenResult {
 
 fn generate_exp() -> u128 {
     SystemTime::now()
-        .checked_add(Duration::new(3600, 0)).unwrap()
+        .checked_add(Duration::new(20, 0)).unwrap()
         .duration_since(UNIX_EPOCH).unwrap()
         .as_millis()
 }
