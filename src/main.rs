@@ -44,14 +44,13 @@ async fn ws(
         Auth::new(users.get_ref().clone()),
         &req,
         stream);
-    log::warn!("{:?}", resp);
     resp
 }
 
 async fn index() -> Result<HttpResponse, Error> {
     Ok(HttpResponse::build(http::StatusCode::OK)
         .content_type("text/html; charset=utf-8")
-        .body(include_str!("../static/index.html")))
+        .body(include_str!("./index.html")))
 }
 
 #[actix_web::main]
@@ -64,7 +63,7 @@ async fn main() -> std::io::Result<()> {
             .data(last_id.clone())
             .route("/", web::get().to(index))
             .route("/ws/", web::get().to(ws)))
-        .bind("127.0.0.1:9001")?
+        .bind("0.0.0.0:9001")?
         .run()
         .await
 }
