@@ -9,6 +9,7 @@ use actix::*;
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const TOKEN_EXPIRATION_TIMEOUT: Duration = Duration::from_secs(20);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
+const DUMMY_SECRET: &str = "secret";
 
 pub type Users = HashMap<String, String>;
 pub struct Auth {
@@ -73,7 +74,7 @@ impl MessageHandler for Auth {
                 Message::RefreshToken { token } => {
                     let decoded: Result<TokenData<Claims>, errors::Error> = decode(
                         &token,
-                        &DecodingKey::from_secret("secret".as_ref()),
+                        &DecodingKey::from_secret(DUMMY_SECRET.as_ref()),
                         &Validation::default());
                     match decoded {
                         Ok(token_data) => {
@@ -141,7 +142,7 @@ fn generate_jwt(username: String) -> TokenResult {
         exp: generate_exp()
     };
 
-    let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret("secret".as_ref())).unwrap();
+    let token = encode(&Header::default(), &my_claims, &EncodingKey::from_secret(DUMMY_SECRET.as_ref())).unwrap();
 
     TokenResult {
         token: token,
