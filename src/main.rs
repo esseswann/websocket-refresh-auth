@@ -56,8 +56,10 @@ async fn index() -> Result<HttpResponse, Error> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    env_logger::init();
+    let users = web::Data::new(Mutex::new(Users::new()));
     HttpServer::new(move || App::new()
-            .data(Users::new())
+            .app_data(users.clone())
             .route("/", web::get().to(index))
             .route("/ws/", web::get().to(ws)))
         .bind("0.0.0.0:9001")?

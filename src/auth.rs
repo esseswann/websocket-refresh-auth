@@ -99,9 +99,9 @@ impl MessageHandler for Auth {
                     Response::AlreadyAuthorized {
                         username: self.claims.as_ref().unwrap().sub.to_owned()
                     },
-                Message::Login { username, password} => 
+                Message::Login { username, password } => 
                     match self.users.lock().unwrap().entry(username.to_owned()) {
-                        Entry::Occupied(entry) if entry.get() == &password =>
+                        Entry::Occupied(entry) if entry.get() != &password =>
                             Response::InvalidPassword,
                         entry => {
                             let TokenResult { token, claims } = generate_jwt(username);
