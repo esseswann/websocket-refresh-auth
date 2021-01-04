@@ -1,12 +1,12 @@
-name: CI
-on:
-  push:
-    branches: [ master ]
+name: Deploy
+on: push
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
-
-      - name: Build and Publish Dockerfile
-        uses: ryanjfrizzell/action-bpd@v1.0.2
+    - name: Checkout Repository
+      uses: actions/checkout@v2
+    - name: Publish Image
+      uses: matootie/github-docker@v3.1.0
+      with:
+        accessToken: ${{ secrets.GITHUB_TOKEN }}
