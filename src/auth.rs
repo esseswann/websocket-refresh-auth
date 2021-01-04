@@ -169,16 +169,16 @@ impl Auth {
             
             ctx.ping(b"");
 
-            let Claims { sub, exp } = act.claims.as_ref().unwrap();
-            
-            if generate_exp() - exp > TOKEN_EXPIRATION_TIMEOUT.as_secs() - HEARTBEAT_INTERVAL.as_secs() {
-                let TokenResult { token, claims } = generate_jwt(sub.into());
-                act.claims = Some(claims);
-                let payload = Response::Success(AuthSuccess {
-                    token,
-                    expires_at: act.claims.as_ref().unwrap().exp
-                });
-                ctx.text(serde_json::to_string(&payload).unwrap())
+            if let Some(Claims { sub, exp }) = act.claims.as_ref() {
+                if generate_exp() - exp > TOKEN_EXPIRATION_TIMEOUT.as_secs() - HEARTBEAT_INTERVAL.as_secs() {
+                    let TokenResult { token, claims } = generate_jwt(sub.into());
+                    act.claims = Some(claims);
+                    let payload = Response::Success(AuthSuccess {
+                        token,
+                        expires_at: act.claims.as_ref().unwrap().exp
+                    });
+                    ctx.text(serde_json::to_string(&payload).unwrap())
+                }
             }
         });
     }
