@@ -38,3 +38,10 @@ Another variant is to poractively request token refresh from client side
 ### Cookies
 The refresh token might also be added to the HTTPS cookie, but it would require breaking the WebSocket connection since the server can only set HttpOnly cookie in a response to the initial HTTP GET request.
 Implementing this approach can save a single initial message
+
+## How to use
+Pull the docker image or build it yourself \
+Run the image with whatever port mapped to 9001
+```
+docker run -p 9001:9001 <container>
+```
