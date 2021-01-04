@@ -10,7 +10,6 @@ const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const TOKEN_EXPIRATION_TIMEOUT: Duration = Duration::from_secs(20);
 const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
-// pub type UserKey = (String, String);
 pub type Users = HashMap<String, String>;
 pub struct Auth {
     pub users: Users,
@@ -30,7 +29,6 @@ impl Auth {
 
 pub trait MessageHandler {
     fn handle_message(&mut self, string: String) -> String;
-    // fn get_by_token(&mut self, string: String) -> Result<String, String>;
 }
 
 #[derive(Serialize, Deserialize)]
