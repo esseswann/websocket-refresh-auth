@@ -1,4 +1,5 @@
 use actix::{Actor, StreamHandler, Running};
+use std::sync::Mutex;
 use actix_web::{web, http, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
 use std::time::{Instant};
@@ -36,12 +37,12 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Auth {
 }
 
 async fn ws(
-    users: web::Data<Users>,
+    users: web::Data<Mutex<Users>>,
     req: HttpRequest,
     stream: web::Payload
 ) -> Result<HttpResponse, Error> {    
     let resp = ws::start(
-        Auth::new(users.get_ref().clone()),
+        Auth::new(users),
         &req,
         stream);
     resp
@@ -55,12 +56,8 @@ async fn index() -> Result<HttpResponse, Error> {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    env_logger::init();
-    let users = Users::new();
-    let last_id: u32 = 0;
     HttpServer::new(move || App::new()
-            .data(users.clone())
-            .data(last_id.clone())
+            .data(Users::new())
             .route("/", web::get().to(index))
             .route("/ws/", web::get().to(ws)))
         .bind("0.0.0.0:9001")?

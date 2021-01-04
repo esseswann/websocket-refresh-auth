@@ -1989,7 +1989,6 @@ dependencies = [
  "actix-web-actors",
  "env_logger",
  "jsonwebtoken",
- "log",
  "serde",
  "serde_json",
 ]

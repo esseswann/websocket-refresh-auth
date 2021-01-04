@@ -9,7 +9,6 @@ name = "websocket_refresh_auth"
 path = "src/main.rs"
 
 [dependencies]
-log = "0.4.11"
 jsonwebtoken = "7"
 actix = "0.10.0"
 actix-web = "3.3.2"

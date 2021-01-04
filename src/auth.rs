@@ -4,7 +4,9 @@ use serde::{Deserialize, Serialize};
 use jsonwebtoken::{encode, decode, Header, errors, TokenData, Validation, EncodingKey, DecodingKey};
 use std::time::{Duration, SystemTime, UNIX_EPOCH, Instant};
 use actix_web_actors::ws;
+use actix_web::{web};
 use actix::*;
+use std::sync::Mutex;
 
 const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
 const TOKEN_EXPIRATION_TIMEOUT: Duration = Duration::from_secs(20);
@@ -13,13 +15,13 @@ const DUMMY_SECRET: &str = "secret";
 
 pub type Users = HashMap<String, String>;
 pub struct Auth {
-    pub users: Users,
+    pub users: web::Data<Mutex<Users>>,
     pub hb: Instant,
     claims: Option<Claims>
 }
 
 impl Auth {
-    pub fn new(users: Users) -> Auth {
+    pub fn new(users: web::Data<Mutex<Users>>) -> Auth {
         Auth {
             users: users,
             claims: None,
@@ -98,7 +100,7 @@ impl MessageHandler for Auth {
                         username: self.claims.as_ref().unwrap().sub.to_owned()
                     },
                 Message::Login { username, password} => 
-                    match self.users.entry(username.to_owned()) {
+                    match self.users.lock().unwrap().entry(username.to_owned()) {
                         Entry::Occupied(entry) if entry.get() == &password =>
                             Response::InvalidPassword,
                         entry => {
@@ -161,7 +163,6 @@ impl Auth {
     pub fn hearbeat(&self, ctx: &mut ws::WebsocketContext<Self>) {
         ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
             if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
-                log::error!("Websocket Client heartbeat failed, disconnecting!");
                 ctx.stop();
                 return;
             };
