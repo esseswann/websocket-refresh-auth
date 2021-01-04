@@ -1,11 +1,18 @@
-use actix::{Actor, StreamHandler};
+use actix::{Actor, StreamHandler, Running};
 use actix_web::{web, http, App, Error, HttpRequest, HttpResponse, HttpServer};
 use actix_web_actors::ws;
+use std::time::{Instant};
 mod auth;
 use auth::{Auth, Users, MessageHandler};
 
 impl Actor for Auth {
     type Context = ws::WebsocketContext<Self>;
+    fn started(&mut self, ctx: &mut Self::Context) {
+        self.hearbeat(ctx);
+    }
+    fn stopping(&mut self, _: &mut Self::Context) -> Running {
+        Running::Stop
+    }
 }
 
 impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Auth {
@@ -15,7 +22,13 @@ impl StreamHandler<Result<ws::Message, ws::ProtocolError>> for Auth {
         ctx: &mut Self::Context,
     ) {
         match msg {
-            Ok(ws::Message::Ping(msg)) => ctx.pong(&msg),
+            Ok(ws::Message::Ping(msg)) => {
+                self.hb = Instant::now();
+                ctx.pong(&msg);
+            }
+            Ok(ws::Message::Pong(_)) => {
+                self.hb = Instant::now();
+            }
             Ok(ws::Message::Text(text)) => ctx.text(&self.handle_message(text)),
             _ => (),
         }

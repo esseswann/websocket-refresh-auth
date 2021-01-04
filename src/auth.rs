@@ -2,12 +2,19 @@ use std::collections::HashMap;
 use std::collections::hash_map::Entry;
 use serde::{Deserialize, Serialize};
 use jsonwebtoken::{encode, decode, Header, errors, TokenData, Validation, EncodingKey, DecodingKey};
-use std::time::{Duration, SystemTime, UNIX_EPOCH};
+use std::time::{Duration, SystemTime, UNIX_EPOCH, Instant};
+use actix_web_actors::ws;
+use actix::*;
+
+const HEARTBEAT_INTERVAL: Duration = Duration::from_secs(5);
+const TOKEN_EXPIRATION_TIMEOUT: Duration = Duration::from_secs(20);
+const CLIENT_TIMEOUT: Duration = Duration::from_secs(10);
 
 // pub type UserKey = (String, String);
 pub type Users = HashMap<String, String>;
 pub struct Auth {
     pub users: Users,
+    pub hb: Instant,
     claims: Option<Claims>
 }
 
@@ -15,7 +22,8 @@ impl Auth {
     pub fn new(users: Users) -> Auth {
         Auth {
             users: users,
-            claims: None
+            claims: None,
+            hb: Instant::now()
         }
     }
 }
@@ -145,7 +153,33 @@ fn generate_jwt(username: String) -> TokenResult {
 
 fn generate_exp() -> u64 {
     SystemTime::now()
-        .checked_add(Duration::new(20, 0)).unwrap()
+        .checked_add(TOKEN_EXPIRATION_TIMEOUT).unwrap()
         .duration_since(UNIX_EPOCH).unwrap()
         .as_secs()
+}
+
+impl Auth {
+    pub fn hearbeat(&self, ctx: &mut ws::WebsocketContext<Self>) {
+        ctx.run_interval(HEARTBEAT_INTERVAL, |act, ctx| {
+            if Instant::now().duration_since(act.hb) > CLIENT_TIMEOUT {
+                log::error!("Websocket Client heartbeat failed, disconnecting!");
+                ctx.stop();
+                return;
+            };
+            
+            ctx.ping(b"");
+
+            let Claims { sub, exp } = act.claims.as_ref().unwrap();
+            
+            if generate_exp() - exp > TOKEN_EXPIRATION_TIMEOUT.as_secs() - HEARTBEAT_INTERVAL.as_secs() {
+                let TokenResult { token, claims } = generate_jwt(sub.into());
+                act.claims = Some(claims);
+                let payload = Response::Success(AuthSuccess {
+                    token,
+                    expires_at: act.claims.as_ref().unwrap().exp
+                });
+                ctx.text(serde_json::to_string(&payload).unwrap())
+            }
+        });
+    }
 }
